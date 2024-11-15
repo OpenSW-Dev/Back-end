@@ -1,5 +1,7 @@
 package com.opensw.food.common.member.entity;
 
+import com.opensw.food.common.entity.BaseTimeEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -8,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @Builder
 @Entity
-public class Member {
+public class Member extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long memberId;
@@ -27,4 +29,14 @@ public class Member {
 
     @Column(nullable = false)
     private boolean isDeleted = false;
+
+    private String token;
+
+    public void addUserAuthority() {
+        this.role = Role.USER;
+    }
+
+    public void encodePassword(PasswordEncoder passwordEncoder) {
+        this.password = passwordEncoder.encode(password);
+    }
 }

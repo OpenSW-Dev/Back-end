@@ -1,6 +1,9 @@
 # Created by https://www.toptal.com/developers/gitignore/api/intellij,windows,gradle,git,java,macos,eclipse
 # Edit at https://www.toptal.com/developers/gitignore?templates=intellij,windows,gradle,git,java,macos,eclipse
 
+# application.yml 제외
+*.yml
+
 ### Eclipse ###
 .metadata
 bin/

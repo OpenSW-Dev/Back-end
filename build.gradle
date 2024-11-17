@@ -31,6 +31,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	// Spring Devtools
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	// Spring Validation
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'

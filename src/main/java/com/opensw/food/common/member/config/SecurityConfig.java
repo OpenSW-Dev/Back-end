@@ -1,7 +1,8 @@
 package com.opensw.food.common.member.config;
 
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -15,7 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    //@Value("${jwt.secret-key}")
+    @Value("${jwt.secret}")
     //private final String secretKey;
 
     //private final JwtFilter jwtFilter;
@@ -24,10 +25,10 @@ public class SecurityConfig {
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    /*
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
+        return null; // 커밋 용 임시
     }
-     */
 }

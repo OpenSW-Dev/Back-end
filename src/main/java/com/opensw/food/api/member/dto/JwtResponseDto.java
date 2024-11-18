@@ -1,4 +1,4 @@
-package com.opensw.food.common.member.dto;
+package com.opensw.food.api.member.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +9,6 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class JwtToken {
+public class JwtResponseDto {
     private String accessToken;
 }

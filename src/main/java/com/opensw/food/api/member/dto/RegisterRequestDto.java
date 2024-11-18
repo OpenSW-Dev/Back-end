@@ -1,6 +1,6 @@
-package com.opensw.food.common.member.dto;
+package com.opensw.food.api.member.dto;
 
-import com.opensw.food.common.member.entity.Role;
+import com.opensw.food.api.member.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 @Builder
 @AllArgsConstructor
-public class MemberSignUpRequestDto {
+public class RegisterRequestDto {
 
     private String email;
 

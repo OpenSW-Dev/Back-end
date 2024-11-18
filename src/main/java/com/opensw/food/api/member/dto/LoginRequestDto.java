@@ -1,4 +1,4 @@
-package com.opensw.food.common.member.dto;
+package com.opensw.food.api.member.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class MemberSignInRequestDto {
+public class LoginRequestDto {
     private String email;
     private String password;
 }

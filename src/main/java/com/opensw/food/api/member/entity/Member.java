@@ -1,9 +1,11 @@
-package com.opensw.food.common.member.entity;
+package com.opensw.food.api.member.entity;
 
 import com.opensw.food.common.entity.BaseTimeEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.time.Instant;
 
 @Getter
 @AllArgsConstructor
@@ -13,15 +15,16 @@ import lombok.*;
 public class Member extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "member_id")
     private Long memberId;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(nullable = false)
+    @Column(name = "nickname", nullable = false)
     private String nickname;
 
     @Enumerated(EnumType.STRING)
@@ -32,11 +35,17 @@ public class Member extends BaseTimeEntity {
 
     private String token;
 
+    private Instant expiredTime;
+
     public void addUserAuthority() {
         this.role = Role.USER;
     }
 
     public void encodePassword(PasswordEncoder passwordEncoder) {
         this.password = passwordEncoder.encode(password);
+    }
+
+    public boolean isAccountNonExpired() {
+        return expiredTime == null || expiredTime.isAfter(Instant.now());
     }
 }

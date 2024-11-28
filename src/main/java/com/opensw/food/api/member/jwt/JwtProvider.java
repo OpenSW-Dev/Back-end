@@ -2,14 +2,13 @@ package com.opensw.food.api.member.jwt;
 
 import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class JwtProvider {
@@ -23,49 +22,48 @@ public class JwtProvider {
         this.expiration = expiration;
     }
 
-    public String generateToken(String subject, Map<String, Object> claims,
-                                Instant expireTime) {
+    public String generateToken(String email, String role) {
         return Jwts.builder()
-                .setSubject(subject)
-                .setClaims(claims)
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(Date.from(expireTime))
+                .setSubject(email)
+                .claim("role", role)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
     }
 
-    public Claims parseToken(String token) {
+    public boolean isTokenValid(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            return !claims.getExpiration().before(new Date());
+        } catch (ExpiredJwtException  e) {
+            System.out.println("JWT Token Expired");
+        } catch (MalformedJwtException  e) {
+            System.out.println("Invalid JWT Token");
+        } catch (UnsupportedJwtException  e) {
+            System.out.println("Unsupported JWT Token");
+        } catch (IllegalArgumentException  e) {
+            System.out.println("JWT claims string is empty");
+        }
+
+        return false;
+    }
+
+    public Authentication getAuthentication(String token) {
+        Claims claims = parseClaims(token);
+        String email = claims.getSubject();
+        String role = claims.get("role", String.class);
+
+        User principal = new User(email, "",
+                Collections.singletonList(new SimpleGrantedAuthority(role)));
+
+        return new UsernamePasswordAuthenticationToken(principal, token, principal.getAuthorities());
+    }
+
+    private Claims parseClaims(String token) {
         return Jwts.parser()
                 .setSigningKey(secretKey)
                 .parseClaimsJws(token)
                 .getBody();
-    }
-
-    public boolean validateToken(String token) {
-        try {
-            Claims claims = parseToken(token);
-            return !claims.getExpiration().before(new Date());
-        } catch (ExpiredJwtException  e) {
-            System.out.println("JWT Token Expired");
-            return false;
-        } catch (MalformedJwtException  e) {
-            System.out.println("Invalid JWT Token");
-            return false;
-        } catch (UnsupportedJwtException  e) {
-            System.out.println("Unsupported JWT Token");
-            return false;
-        } catch (IllegalArgumentException  e) {
-            System.out.println("JWT claims string is empty");
-            return false;
-        }
-    }
-
-    public String getEmailFromClaims(Claims claims) {
-        return claims.getSubject();
-    }
-
-    public List<SimpleGrantedAuthority> getAuthoritiesFromClaims(Claims claims) {
-        String role = claims.get("role", String.class);
-        return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 }

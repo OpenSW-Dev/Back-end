@@ -13,14 +13,14 @@ import lombok.Data;
 @AllArgsConstructor
 public class RegisterRequestDto {
 
-    @NotBlank(message = "")
+    @NotBlank(message = "이메일을 입력해주세요.")
     private String email;
 
-    @NotBlank(message = "")
-    @Size(min = 2, message = "")
+    @NotBlank(message = "닉네임을 입력해주세요")
+    @Size(min = 2, message = "닉네임이 너무 짧습니다.")
     private String nickname;
 
-    @NotBlank(message = "")
+    @NotBlank(message = "비밀번호를 입력해주세요.")
     private String password;
 
     private String checkPassword;

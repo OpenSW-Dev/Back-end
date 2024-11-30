@@ -1,18 +1,51 @@
 package com.opensw.food.api.member.service;
 
+
 import com.opensw.food.api.member.dto.LoginRequestDto;
 import com.opensw.food.api.member.dto.RegisterRequestDto;
 import com.opensw.food.api.member.entity.Member;
+import com.opensw.food.api.member.jwt.JwtProvider;
+import com.opensw.food.api.member.repository.MemberRepository;
+import com.opensw.food.common.exception.NotFoundException;
+import com.opensw.food.common.response.ErrorStatus;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+@Service
+@RequiredArgsConstructor
+public class MemberService {
 
-public interface MemberService {
+    private final MemberRepository memberRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
 
-    String login(LoginRequestDto loginRequestDto) throws Exception;
+    public Member registerMember(RegisterRequestDto requestDto) {
 
-    Long register(RegisterRequestDto registerRequestDto) throws Exception;
+        if (memberRepository.existsByNickname(requestDto.getNickname())) {
+            throw new IllegalArgumentException("Nickname is already in use");
+        }
 
-    String generateToken(Member member);
+        Member member = requestDto.toMember();
+        member.encodePassword(passwordEncoder);
 
-    Optional<Member> findByToken(String token);
+        return memberRepository.save(member);
+    }
+
+    public String loginMember(LoginRequestDto requestDto) {
+        Member member = memberRepository.findByEmail(requestDto.getEmail())
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
+
+        if (!passwordEncoder.matches(requestDto.getPassword(), member.getPassword())) {
+            throw new IllegalArgumentException("Wrong Email or Wrong password");
+        }
+
+        return jwtProvider.generateToken(member.getEmail(), member.getRole().name());
+    }
+
+    public Long getUserIdByEmail(String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
+        return member.getMemberId();
+    }
 }

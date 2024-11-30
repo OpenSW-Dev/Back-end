@@ -22,7 +22,6 @@ import org.springframework.web.cors.CorsConfiguration;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-
     private final JwtProvider jwtProvider;
 
     @Bean

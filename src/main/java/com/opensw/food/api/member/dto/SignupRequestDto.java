@@ -11,7 +11,7 @@ import lombok.Data;
 @Data
 @Builder
 @AllArgsConstructor
-public class RegisterRequestDto {
+public class SignupRequestDto {
 
     @NotBlank(message = "이메일을 입력해주세요.")
     private String email;

@@ -1,6 +1,9 @@
 package com.opensw.food.api.member.jwt;
 
+import com.opensw.food.common.exception.UnauthorizedException;
+import com.opensw.food.common.response.ErrorStatus;
 import io.jsonwebtoken.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 @Component
+@Slf4j
 public class JwtProvider {
 
     private final String secretKey;
@@ -23,11 +27,14 @@ public class JwtProvider {
     }
 
     public String generateToken(String email, String role) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expiration);
+
         return Jwts.builder()
                 .setSubject(email)
                 .claim("role", role)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
                 .signWith(SignatureAlgorithm.HS256, secretKey)
                 .compact();
     }
@@ -37,16 +44,18 @@ public class JwtProvider {
             Claims claims = parseClaims(token);
             return !claims.getExpiration().before(new Date());
         } catch (ExpiredJwtException  e) {
-            System.out.println("JWT Token Expired");
+            log.error("Expired JWT token: {}", e.getMessage());
+            throw new UnauthorizedException(ErrorStatus.TOKEN_EXPIRED.getMessage());
         } catch (MalformedJwtException  e) {
-            System.out.println("Invalid JWT Token");
+            log.error("Invalid JWT token: {}", e.getMessage());
+            throw new UnauthorizedException(ErrorStatus.INVALID_TOKEN.getMessage());
         } catch (UnsupportedJwtException  e) {
-            System.out.println("Unsupported JWT Token");
+            log.error("Unsupported JWT token: {}", e.getMessage());
+            throw new UnauthorizedException(ErrorStatus.UNSUPPORTED_TOKEN.getMessage());
         } catch (IllegalArgumentException  e) {
-            System.out.println("JWT claims string is empty");
+            log.error("JWT claims string is empty: {}", e.getMessage());
+            throw new UnauthorizedException(ErrorStatus.EMPTY_TOKEN.getMessage());
         }
-
-        return false;
     }
 
     public Authentication getAuthentication(String token) {
@@ -61,9 +70,13 @@ public class JwtProvider {
     }
 
     private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .setSigningKey(secretKey)
-                .parseClaimsJws(token)
-                .getBody();
+        try {
+            return Jwts.parser()
+                    .setSigningKey(secretKey)
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (ExpiredJwtException e) {
+            return e.getClaims();
+        }
     }
 }

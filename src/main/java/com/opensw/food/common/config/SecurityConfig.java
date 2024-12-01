@@ -47,7 +47,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/login", "/signup").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()    // 인증 관련 엔드포인트
+                        .requestMatchers("/api/public/**").permitAll()  // 공개 API 엔드포인트
+                        .requestMatchers("/h2-console/**").permitAll()  // H2 콘솔 접근 허용
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);
 

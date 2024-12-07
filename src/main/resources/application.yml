@@ -25,7 +25,7 @@ spring:
         ddl-auto: update
 
 jwt:
-    secret: A2967C53C9F5AA135BD6A5198E183
+    secret: A2967C53C9F5AA135BD6A5198E1837B2D4F9A6C8E1B7DFA12CD3E9F2A4B6C7D
     expiration: 86400000 # 임시 만료 시간 설정 추후 변경 (24시간)
 
 springdoc:

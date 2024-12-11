@@ -18,6 +18,7 @@ public enum ErrorStatus {
     DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, "이미 사용 중인 이메일입니다."),
     NOT_ALLOW_IMG_MIME(HttpStatus.BAD_REQUEST,"이미지 확장자 업로드만 가능합니다"),
     ARTICLE_WRITER_NOT_SAME_USER_EXCEPTION(HttpStatus.BAD_REQUEST,"게시글 작성자와 요청자가 다릅니다."),
+    COMMENT_WRITER_NOT_SAME_USER_EXCEPTION(HttpStatus.BAD_REQUEST,"댓글 작성자와 요청자가 다릅니다."),
 
     /**
      * 401 UNAUTHORIZED
@@ -38,6 +39,8 @@ public enum ErrorStatus {
      */
     USER_NOTFOUND_EXCEPTION(HttpStatus.NOT_FOUND, "해당 유저를 찾을 수 없습니다."),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다."),
+    PARENT_COMMENT_NOT_FOUND_EXCEPTION(HttpStatus.NOT_FOUND,"부모 댓글을 찾을 수 없습니다."),
+    COMMENT_NOT_FOUND_EXCEPTION(HttpStatus.NOT_FOUND,"댓글을 찾을 수 없습니다."),
 
     /**
      * 500 SERVER_ERROR

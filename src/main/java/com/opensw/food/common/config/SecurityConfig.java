@@ -2,6 +2,7 @@ package com.opensw.food.common.config;
 
 import com.opensw.food.api.member.jwt.JwtFilter;
 import com.opensw.food.api.member.jwt.JwtProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.context.annotation.Bean;
@@ -16,6 +17,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 @Configuration
 @EnableWebSecurity
@@ -41,25 +46,27 @@ public class SecurityConfig {
             throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
-                .cors(cors -> cors
-                        .configurationSource(request -> {
-                            CorsConfiguration configuration = new CorsConfiguration();
-                            configuration.addAllowedOrigin("http://localhost:8080"); // 로컬 테스트 CORS
-                            configuration.addAllowedMethod("https://food-social.kro.kr"); // 배포 후 CORS
-                            configuration.addAllowedMethod("127.0.0.1:5500"); // 프론트 내부 테스트 CORS
-                            configuration.addAllowedMethod("GET");
-                            configuration.addAllowedMethod("POST");
-                            configuration.addAllowedMethod("PUT");
-                            configuration.addAllowedMethod("DELETE");
-                            configuration.addAllowedMethod("OPTIONS"); // CORS 프리플라이트 요청 허용
-                            configuration.addAllowedHeader("*"); // 모든 헤더 허용
-                            configuration.setAllowCredentials(true); // 인증 정보 허용
-                            return configuration;
-                        }))
+                .cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
+                    @Override
+                    public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                        CorsConfiguration config = new CorsConfiguration();
+                        config.setAllowedOrigins(Arrays.asList(
+                                "https://food-social.kro.kr",
+                                "http://localhost:8080",
+                                "http://127.0.0.1:5500"
+                        ));
+                        config.setAllowedMethods(Collections.singletonList("*"));
+                        config.setAllowCredentials(true);
+                        config.setAllowedHeaders(Collections.singletonList("*"));
+                        config.setMaxAge(3600L); //1시간
+                        config.addExposedHeader("Authorization");
+                        config.addExposedHeader("Authorization-Refresh");
+                        return config;
+                    }
+                }))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(headers -> headers
-                        .frameOptions(frameOptions -> frameOptions.sameOrigin())) // H2 콘솔 허용
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable())) // H2 콘솔 허용
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/**").permitAll()    // 인증 관련 엔드포인트
                         .requestMatchers("/api/v1/public/**").permitAll()  // 공개 API 엔드포인트

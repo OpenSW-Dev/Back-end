@@ -46,6 +46,7 @@ public class SecurityConfig {
                             CorsConfiguration configuration = new CorsConfiguration();
                             configuration.addAllowedOrigin("http://localhost:8080"); // 로컬 테스트 CORS
                             configuration.addAllowedMethod("https://food-social.kro.kr"); // 배포 후 CORS
+                            configuration.addAllowedMethod("127.0.0.1:5500"); // 프론트 내부 테스트 CORS
                             return configuration;
                         }))
                 .sessionManagement(session -> session

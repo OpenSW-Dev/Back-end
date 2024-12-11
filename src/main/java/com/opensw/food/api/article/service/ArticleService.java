@@ -1,0 +1,197 @@
+package com.opensw.food.api.article.service;
+
+import com.opensw.food.api.article.dto.ArticleCreateRequestDTO;
+import com.opensw.food.api.article.dto.ArticleDetailResponseDTO;
+import com.opensw.food.api.article.dto.ArticleTotalListResponseDTO;
+import com.opensw.food.api.article.dto.MyArticleListResponseDTO;
+import com.opensw.food.api.article.entity.Article;
+import com.opensw.food.api.article.entity.ArticleImage;
+import com.opensw.food.api.article.entity.ArticleLike;
+import com.opensw.food.api.article.repository.ArticleLikeRepository;
+import com.opensw.food.api.article.repository.ArticleRepository;
+import com.opensw.food.api.aws.s3.S3Service;
+import com.opensw.food.api.member.entity.Member;
+import com.opensw.food.api.member.repository.MemberRepository;
+import com.opensw.food.api.member.service.MemberService;
+import com.opensw.food.common.exception.BadRequestException;
+import com.opensw.food.common.exception.NotFoundException;
+import com.opensw.food.common.response.ErrorStatus;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ArticleService {
+
+    private final MemberRepository memberRepository;
+    private final ArticleRepository articleRepository;
+    private final ArticleLikeRepository articleLikeRepository;
+    private final S3Service s3Service;
+    private final MemberService memberService;
+
+    // 게시글 생성
+    public void createArticle(Long userId, ArticleCreateRequestDTO articleRequest, List<MultipartFile> images) throws IOException {
+
+        // 해당 유저를 찾을 수 없을 경우 예외처리
+        Member member = memberRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
+
+        Article article = Article.builder()
+                .member(member)
+                .title(articleRequest.getTitle())
+                .content(articleRequest.getContent())
+                .category(articleRequest.getCategory())
+                .likeCnt(0)
+                .build();
+
+        // 이미지 처리
+        if (images != null && !images.isEmpty()) {
+
+            List<String> imageUrls = s3Service.uploadArticleImages(String.valueOf(userId), images);
+            article.addImages(imageUrls);
+        }
+
+        articleRepository.save(article);
+    }
+
+    // 전체 게시글 조회
+    public List<ArticleTotalListResponseDTO> getTotalArticle() {
+        List<Article> articles = articleRepository.findAll();
+
+        return articles.stream()
+                .map(article -> new ArticleTotalListResponseDTO(article.getId(), article.getTitle(), article.getCategory()))
+                .collect(Collectors.toList());
+    }
+
+    // 메모 상세 조회
+    public ArticleDetailResponseDTO getArticleDetail(Long articleId, UserDetails userDetails) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
+
+        boolean myArticle = false;
+        boolean myLike = false;
+
+        if (userDetails != null) {
+            Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
+            myLike = articleLikeRepository.findByArticleIdAndMemberMemberId(articleId, userId).isPresent();
+            myArticle = article.getMember().getMemberId().equals(userId);
+        }
+
+        List<String> imageUrls = article.getImages().isEmpty() ? null :
+                article.getImages().stream().map(ArticleImage::getImageUrl).collect(Collectors.toList());
+
+        // 날짜 포맷팅
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH:mm:ss");
+        String formattedDate = article.getUpdatedAt().format(formatter);
+
+        return ArticleDetailResponseDTO.builder()
+                .id(article.getId())
+                .title(article.getTitle())
+                .date(formattedDate)
+                .content(article.getContent())
+                .likeCnt(article.getLikeCnt())
+                .images(imageUrls)
+                .category(article.getCategory())
+                .myArticle(myArticle)
+                .myLike(myLike)
+                .authorId(article.getMember().getMemberId())
+                .nickname(article.getMember().getNickname())
+                .build();
+    }
+
+    // 내가 작성한 게시글 조회
+    public List<MyArticleListResponseDTO> getMyArticleList(UserDetails userDetails){
+
+        // 현재 사용자 조회
+        Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
+
+        // 사용자 작성 게시글 조회
+        List<Article> myMemos = articleRepository.findArticlesByMemberMemberId(userId);
+
+        // DTO 변환 및 반환
+        return myMemos.stream()
+                .map(memo -> new MyArticleListResponseDTO(
+                        memo.getId(),
+                        memo.getTitle(),
+                        memo.getContent(),
+                        memo.getCategory(),
+                        memo.getLikeCnt(),
+                        memo.getImages().stream().map(ArticleImage::getImageUrl).collect(Collectors.toList())
+                )).collect(Collectors.toList());
+    }
+
+    // 게시글 삭제
+    public void deleteArticle(Long articleId, Long userId) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
+
+        // 게시글 작성자와 삭제 요청자가 다를 경우 예외 처리
+        if (!article.getMember().getMemberId().equals(userId)) {
+            throw new NotFoundException(ErrorStatus.ARTICLE_WRITER_NOT_SAME_USER_EXCEPTION.getMessage());
+        }
+
+        articleRepository.delete(article);
+    }
+
+    // 게시글 수정
+    public void updateArticle(Long memoId, Long userId, ArticleCreateRequestDTO articleRequest,
+                           List<MultipartFile> newImages, List<String> deleteImageUrls) throws IOException {
+
+        Article article = articleRepository.findById(memoId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
+
+        // 메모 작성자 확인
+        if (!article.getMember().getMemberId().equals(userId)) {
+            throw new BadRequestException(ErrorStatus.ARTICLE_WRITER_NOT_SAME_USER_EXCEPTION.getMessage());
+        }
+
+        // 메모 정보 업데이트 (Builder 패턴 사용)
+        Article updatedArticle = Article.builder()
+                .id(article.getId())
+                .member(article.getMember())
+                .title(articleRequest.getTitle())
+                .content(articleRequest.getContent())
+                .category(articleRequest.getCategory())
+                .likeCnt(article.getLikeCnt())
+                .images(new ArrayList<>(article.getImages()))
+                .build();
+
+        // 삭제할 이미지 처리
+        if (deleteImageUrls != null && !deleteImageUrls.isEmpty()) {
+            List<ArticleImage> imagesToRemove = article.getImages().stream()
+                    .filter(image -> deleteImageUrls.contains(image.getImageUrl()))
+                    .collect(Collectors.toList());
+
+            for (ArticleImage image : imagesToRemove) {
+                // S3에서 이미지 삭제
+                s3Service.deleteFile(image.getImageUrl());
+                // 메모에서 이미지 제거
+                updatedArticle.getImages().remove(image);
+            }
+        }
+
+        // 새로운 이미지 업로드 및 추가
+        if (newImages != null && !newImages.isEmpty()) {
+            List<String> imageUrls = s3Service.uploadArticleImages(String.valueOf(userId), newImages);
+            for (String url : imageUrls) {
+                ArticleImage image = ArticleImage.builder()
+                        .imageUrl(url)
+                        .article(updatedArticle)
+                        .build();
+                updatedArticle.getImages().add(image);
+            }
+        }
+
+        articleRepository.save(updatedArticle);
+    }
+
+}

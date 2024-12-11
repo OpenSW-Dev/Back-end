@@ -42,14 +42,21 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .cors(cors -> cors
-                        .configurationSource(request -> new CorsConfiguration()
-                                .applyPermitDefaultValues()))
+                        .configurationSource(request -> {
+                            CorsConfiguration configuration = new CorsConfiguration();
+                            configuration.addAllowedOrigin("http://localhost:8080"); // 로컬 테스트 CORS
+                            configuration.addAllowedMethod("https://food-social.kro.kr"); // 배포 후 CORS
+                            return configuration;
+                        }))
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers
+                        .frameOptions(frameOptions -> frameOptions.sameOrigin())) // H2 콘솔 허용
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/v1/auth/**").permitAll()    // 인증 관련 엔드포인트
                         .requestMatchers("/api/v1/public/**").permitAll()  // 공개 API 엔드포인트
                         .requestMatchers("/h2-console/**").permitAll()  // H2 콘솔 접근 허용
+                        .requestMatchers("/api/v1/article/detail", "/api/v1/article/total").permitAll() // 게시글 전체, 상세 조회 접근 허용
                         .requestMatchers( "/api-doc","/v3/api-docs/**", "/swagger-resources/**","/swagger-ui/**").permitAll() // 스웨거 접근 허용
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);

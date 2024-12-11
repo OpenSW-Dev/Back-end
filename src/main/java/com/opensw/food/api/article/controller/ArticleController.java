@@ -225,6 +225,24 @@ public class ArticleController {
         return ApiResponse.success_only(SuccessStatus.TOGGLE_LIKE_SUCCESS);
     }
 
+    @Operation(
+            summary = "팔로우한 사용자 게시글 조회 API",
+            description = "내가 팔로우하고 있는 사용자들의 게시글을 최신순으로 조회합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "게시글 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "필수 정보가 입력되지 않았습니다."),
+    })
+    @GetMapping("/following-articles")
+    public ResponseEntity<ApiResponse<List<ArticleTotalListResponseDTO>>> getFollowingArticles(
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
+        List<ArticleTotalListResponseDTO> articles = articleService.getFollowingArticles(userId);
+
+        return ApiResponse.success(SuccessStatus.SEND_ARTICLE_SUCCESS, articles);
+    }
+
     private boolean isImageFile(MultipartFile file) {
         // 허용되는 이미지 MIME 타입
         String contentType = file.getContentType();

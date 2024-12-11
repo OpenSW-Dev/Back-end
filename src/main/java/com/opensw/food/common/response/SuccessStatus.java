@@ -18,6 +18,7 @@ public enum SuccessStatus {
     SEND_ARTICLE_SUCCESS(HttpStatus.OK,"게시글 조회 성공"),
     DELETE_MEMO_SUCCESS(HttpStatus.OK,"게시글 삭제 성공"),
     UPDATE_MEMO_SUCCESS(HttpStatus.OK,"게시글 수정 성공"),
+    TOGGLE_LIKE_SUCCESS(HttpStatus.OK,"좋아요 토글 성공"),
 
     /**
      * 201

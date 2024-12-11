@@ -15,6 +15,9 @@ public enum SuccessStatus {
     SEND_LOGIN_SUCCESS(HttpStatus.OK, "로그인 성공"),
     GET_MEMBER_SUCCESS(HttpStatus.OK, "회원 정보 조회 성공"),
     GET_CURRENT_MEMBER_SUCCESS(HttpStatus.OK, "현재 사용자 정보 조회 성공"),
+    SEND_ARTICLE_SUCCESS(HttpStatus.OK,"게시글 조회 성공"),
+    DELETE_MEMO_SUCCESS(HttpStatus.OK,"게시글 삭제 성공"),
+    UPDATE_MEMO_SUCCESS(HttpStatus.OK,"게시글 수정 성공"),
 
     /**
      * 201

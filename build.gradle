@@ -25,14 +25,21 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+
 	// JPA
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
 	// Spring Security
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+
 	// Spring Devtools
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
 	// Spring Validation
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	//AWS S3
+	implementation 'software.amazon.awssdk:s3:2.27.12'
 
 	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'

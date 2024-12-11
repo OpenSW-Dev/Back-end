@@ -1,11 +1,20 @@
 spring:
+  profiles:
+    group:
+      "local" : "local, jwt, oauth, aws"
+    active : local
 
-  application:
-    name: food
+---
+spring:
+  config:
+    activate:
+      on-profile: "local"
 
   h2:
-     console:
-        enabled: true
+    console:
+      enabled: true
+      settings:
+        web-allow-others: true
 
   datasource:
       driver-class-name: org.h2.Driver

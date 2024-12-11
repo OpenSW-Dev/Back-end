@@ -194,4 +194,32 @@ public class ArticleService {
         articleRepository.save(updatedArticle);
     }
 
+    // 좋아요 토글
+    public void toggleLike(Long articleId, Long userId) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
+
+        Member member = memberRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
+
+        // 좋아요 상태 확인
+        Optional<ArticleLike> existingLike = articleLikeRepository.findByArticleIdAndMemberMemberId(articleId, userId);
+
+        if (existingLike.isPresent()) {
+            // 좋아요 취소
+            articleLikeRepository.delete(existingLike.get());
+            article = article.decreaseLikeCnt();
+        } else {
+            // 좋아요 추가
+            ArticleLike articleLike = ArticleLike.builder()
+                    .article(article)
+                    .member(member)
+                    .build();
+            articleLikeRepository.save(articleLike);
+            article = article.increaseLikeCnt();
+        }
+
+        articleRepository.save(article);
+    }
+
 }

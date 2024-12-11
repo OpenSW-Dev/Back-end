@@ -207,6 +207,23 @@ public class ArticleController {
         return ApiResponse.success_only(SuccessStatus.UPDATE_MEMO_SUCCESS);
     }
 
+    @Operation(
+            summary = "게시글 좋아요 토글 API",
+            description = "특정 게시글에 좋아요를 누르거나 취소합니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "좋아요 토글 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "해당 게시글을 찾을 수 없습니다."),
+    })
+    @PostMapping("/like/{articleId}")
+    public ResponseEntity<ApiResponse<Void>> toggleLike(
+            @PathVariable Long articleId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
+        articleService.toggleLike(articleId, userId);
+        return ApiResponse.success_only(SuccessStatus.TOGGLE_LIKE_SUCCESS);
+    }
 
     private boolean isImageFile(MultipartFile file) {
         // 허용되는 이미지 MIME 타입

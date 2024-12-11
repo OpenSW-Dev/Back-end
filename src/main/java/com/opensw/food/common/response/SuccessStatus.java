@@ -19,6 +19,9 @@ public enum SuccessStatus {
     DELETE_MEMO_SUCCESS(HttpStatus.OK,"게시글 삭제 성공"),
     UPDATE_MEMO_SUCCESS(HttpStatus.OK,"게시글 수정 성공"),
     TOGGLE_LIKE_SUCCESS(HttpStatus.OK,"좋아요 토글 성공"),
+    USER_FOLLOW_SUCCESS(HttpStatus.OK,"팔로우 성공"),
+    USER_UNFOLLOW_SUCCESS(HttpStatus.OK,"언팔로우 성공"),
+    GET_FOLLOWED_USERS_SUCCESS(HttpStatus.OK,"팔로잉 정보 조회 성공"),
 
     /**
      * 201

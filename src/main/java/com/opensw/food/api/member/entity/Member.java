@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @AllArgsConstructor
@@ -36,6 +37,12 @@ public class Member extends BaseTimeEntity {
     private String token;
 
     private Instant expiredTime;
+
+    @OneToMany(mappedBy = "follower", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Follow> following;  // 내가 팔로우 하는 사람들
+
+    @OneToMany(mappedBy = "following", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Follow> followers;  // 나를 팔로우 하는 사람들
 
     public void addUserAuthority() {
         this.role = Role.USER;

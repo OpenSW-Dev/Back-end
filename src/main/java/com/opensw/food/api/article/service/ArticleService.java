@@ -10,6 +10,7 @@ import com.opensw.food.api.article.entity.ArticleLike;
 import com.opensw.food.api.article.repository.ArticleLikeRepository;
 import com.opensw.food.api.article.repository.ArticleRepository;
 import com.opensw.food.api.aws.s3.S3Service;
+import com.opensw.food.api.member.entity.Follow;
 import com.opensw.food.api.member.entity.Member;
 import com.opensw.food.api.member.repository.MemberRepository;
 import com.opensw.food.api.member.service.MemberService;
@@ -24,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -67,10 +69,15 @@ public class ArticleService {
     public List<ArticleTotalListResponseDTO> getTotalArticle() {
         List<Article> articles = articleRepository.findAll();
 
-        return articles.stream()
+        List<Article> sortedArticles = articles.stream()
+                .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt()))
+                .toList();
+
+        return sortedArticles.stream()
                 .map(article -> new ArticleTotalListResponseDTO(article.getId(), article.getTitle(), article.getCategory()))
                 .collect(Collectors.toList());
     }
+
 
     // 메모 상세 조회
     public ArticleDetailResponseDTO getArticleDetail(Long articleId, UserDetails userDetails) {
@@ -220,6 +227,36 @@ public class ArticleService {
         }
 
         articleRepository.save(article);
+    }
+
+    // 팔로우 하고 있는 사람의 게시글 리스트 조회
+    public List<ArticleTotalListResponseDTO> getFollowingArticles(Long userId) {
+        Member member = memberRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
+
+        // 내가 팔로우하고 있는 사람들 가져오기
+        // follower = 나, following = 내가 팔로우하는 사용자
+        List<Follow> followingList = member.getFollowing();
+
+        // 팔로우하고 있는 사용자들의 memberId 리스트 추출
+        List<Long> followingIds = followingList.stream()
+                .map(follow -> follow.getFollowing().getMemberId())
+                .toList();
+
+        // 팔로우 대상자들이 작성한 게시글 조회
+        // followingIds가 비어있을 수 있으므로 체크
+        if (followingIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Article> articles = articleRepository.findAll().stream()
+                .filter(article -> followingIds.contains(article.getMember().getMemberId()))
+                .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt())) // 최신순 정렬(필요 시)
+                .toList();
+
+        return articles.stream()
+                .map(article -> new ArticleTotalListResponseDTO(article.getId(), article.getTitle(), article.getCategory()))
+                .collect(Collectors.toList());
     }
 
 }

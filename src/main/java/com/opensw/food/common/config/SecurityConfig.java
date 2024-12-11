@@ -47,6 +47,13 @@ public class SecurityConfig {
                             configuration.addAllowedOrigin("http://localhost:8080"); // 로컬 테스트 CORS
                             configuration.addAllowedMethod("https://food-social.kro.kr"); // 배포 후 CORS
                             configuration.addAllowedMethod("127.0.0.1:5500"); // 프론트 내부 테스트 CORS
+                            configuration.addAllowedMethod("GET");
+                            configuration.addAllowedMethod("POST");
+                            configuration.addAllowedMethod("PUT");
+                            configuration.addAllowedMethod("DELETE");
+                            configuration.addAllowedMethod("OPTIONS"); // CORS 프리플라이트 요청 허용
+                            configuration.addAllowedHeader("*"); // 모든 헤더 허용
+                            configuration.setAllowCredentials(true); // 인증 정보 허용
                             return configuration;
                         }))
                 .sessionManagement(session -> session

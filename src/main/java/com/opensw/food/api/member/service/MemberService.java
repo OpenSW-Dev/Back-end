@@ -6,6 +6,7 @@ import com.opensw.food.api.comment.repository.CommentRepository;
 import com.opensw.food.api.member.dto.FollowedUserDTO;
 import com.opensw.food.api.member.dto.LoginRequestDto;
 import com.opensw.food.api.member.dto.SignupRequestDto;
+import com.opensw.food.api.member.dto.UserInfoResponseDTO;
 import com.opensw.food.api.member.entity.Follow;
 import com.opensw.food.api.member.entity.Member;
 import com.opensw.food.api.member.entity.Role;
@@ -66,16 +67,14 @@ public class MemberService {
         return member.getMemberId();
     }
 
-    public Member getCurrentMember() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new UnauthorizedException(ErrorStatus.USER_UNAUTHORIZED.getMessage());
-        }
-
-        String email = authentication.getName();
-
-        return memberRepository.findByEmail(email)
+    public UserInfoResponseDTO getCurrentMember(Long userId) {
+        // 해당 유저를 찾을 수 없을 경우 예외처리
+        Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
+
+        int followerCount = member.getFollowers().size(); //팔로워 수 계산
+
+        return new UserInfoResponseDTO(member, followerCount);
     }
 
     @Transactional

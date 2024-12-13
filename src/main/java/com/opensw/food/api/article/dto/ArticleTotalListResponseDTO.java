@@ -11,4 +11,7 @@ public class ArticleTotalListResponseDTO {
     private Long id;
     private String title;
     private String category;
+    private String image;
+    private Long authorId;
+    private String nickname;
 }

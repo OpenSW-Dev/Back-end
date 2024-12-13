@@ -74,7 +74,21 @@ public class ArticleService {
                 .toList();
 
         return sortedArticles.stream()
-                .map(article -> new ArticleTotalListResponseDTO(article.getId(), article.getTitle(), article.getCategory()))
+                .map(article -> {
+                    // 이미지 리스트 중 첫 번째 이미지를 추출
+                    String firstImageUrl = article.getImages().isEmpty()
+                            ? null
+                            : article.getImages().get(0).getImageUrl();
+
+                    return new ArticleTotalListResponseDTO(
+                            article.getId(),
+                            article.getTitle(),
+                            article.getCategory(),
+                            firstImageUrl,
+                            article.getMember().getMemberId(),
+                            article.getMember().getNickname()
+                    );
+                })
                 .collect(Collectors.toList());
     }
 
@@ -255,7 +269,21 @@ public class ArticleService {
                 .toList();
 
         return articles.stream()
-                .map(article -> new ArticleTotalListResponseDTO(article.getId(), article.getTitle(), article.getCategory()))
+                .map(article -> {
+                    // 이미지 리스트 중 첫 번째 이미지를 추출
+                    String firstImageUrl = article.getImages().isEmpty()
+                            ? null
+                            : article.getImages().get(0).getImageUrl();
+
+                    return new ArticleTotalListResponseDTO(
+                            article.getId(),
+                            article.getTitle(),
+                            article.getCategory(),
+                            firstImageUrl,
+                            article.getMember().getMemberId(),
+                            article.getMember().getNickname()
+                    );
+                })
                 .collect(Collectors.toList());
     }
 

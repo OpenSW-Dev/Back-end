@@ -1,9 +1,6 @@
 package com.opensw.food.api.member.controller;
 
-import com.opensw.food.api.member.dto.FollowRequestDTO;
-import com.opensw.food.api.member.dto.FollowedUserDTO;
-import com.opensw.food.api.member.dto.LoginRequestDto;
-import com.opensw.food.api.member.dto.SignupRequestDto;
+import com.opensw.food.api.member.dto.*;
 import com.opensw.food.api.member.entity.Member;
 import com.opensw.food.api.member.service.MemberService;
 import com.opensw.food.common.response.ApiResponse;
@@ -53,10 +50,15 @@ public class MemberController {
         return ApiResponse.success(SuccessStatus.GET_MEMBER_SUCCESS, memberId);
     }
 
+    @Operation(summary = "사용자 정보 조회 API", description = "사용자 정보를 조회합니다.")
     @GetMapping("/members/me")
-    public ResponseEntity<ApiResponse<Member>> getCurrentMember() {
-        Member currentMember = memberService.getCurrentMember();
-        return ApiResponse.success(SuccessStatus.GET_CURRENT_MEMBER_SUCCESS, currentMember);
+    public ResponseEntity<ApiResponse<UserInfoResponseDTO>> getCurrentMember(@AuthenticationPrincipal UserDetails userDetails) {
+
+        Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
+
+        UserInfoResponseDTO userInfo = memberService.getCurrentMember(userId);
+
+        return ApiResponse.success(SuccessStatus.GET_CURRENT_MEMBER_SUCCESS, userInfo);
     }
 
     @Operation(summary = "사용자 팔로우, 언팔로우 API", description = "특정 사용자를 팔로우하거나, 이미 팔로우한 경우 해지합니다.")

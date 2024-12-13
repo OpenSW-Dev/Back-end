@@ -87,7 +87,7 @@ public class MemberController {
     @PostMapping("/auth/withdraw")
     public ResponseEntity<ApiResponse<Void>> withdrawMember(Member member) {
         Long memberId = memberService.getUserIdByEmail(member.getEmail());
-        memberService.deleteMember(memberId);
+        memberService.withDrawMember(memberId);
 
         return ApiResponse.success_only(SuccessStatus.MEMBER_WITHDRAW_SUCCESS);
     }

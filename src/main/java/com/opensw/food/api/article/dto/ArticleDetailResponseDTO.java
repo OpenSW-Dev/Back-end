@@ -18,6 +18,7 @@ public class ArticleDetailResponseDTO {
     private String date;
     private String category;
     private long likeCnt;
+    private long cmtCnt;
     private List<String> images;
     private boolean myArticle;
     private boolean myLike;

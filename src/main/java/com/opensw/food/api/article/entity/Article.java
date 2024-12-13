@@ -25,6 +25,7 @@ public class Article extends BaseTimeEntity{
     private String category;
     private String title;
     private long likeCnt;
+    private long cmtCnt;
 
     @Column(columnDefinition = "TEXT")
     private String content;
@@ -66,4 +67,17 @@ public class Article extends BaseTimeEntity{
                 .build();
     }
 
+    // 댓글 수 증가
+    public Article increaseCmtCnt() {
+        return this.toBuilder()
+                .cmtCnt(this.cmtCnt + 1)
+                .build();
+    }
+
+    // 댓굴 수 감소
+    public Article decreaseCmtCnt() {
+        return this.toBuilder()
+                .cmtCnt(this.cmtCnt - 1)
+                .build();
+    }
 }

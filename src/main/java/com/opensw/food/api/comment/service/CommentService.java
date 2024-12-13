@@ -52,8 +52,8 @@ public class CommentService {
         commentRepository.save(comment);
 
         // 댓글 수 증가
-        // updatedArticle = article.increaseCommentCount();
-        //articleRepository.save(updatedArticle);
+        Article updatedArticle = article.increaseCmtCnt();
+        articleRepository.save(updatedArticle);
     }
 
     @Transactional(readOnly = true)
@@ -102,6 +102,11 @@ public class CommentService {
         deleteChildComments(comment);
 
         commentRepository.delete(comment);
+
+        // 댓글 수 감소
+        Article article = comment.getArticle();
+        Article updatedArticle = article.decreaseCmtCnt();
+        articleRepository.save(updatedArticle);
     }
 
     private void deleteChildComments(Comment parentComment) {

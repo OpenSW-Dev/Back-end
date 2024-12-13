@@ -93,7 +93,7 @@ public class ArticleService {
     }
 
 
-    // 메모 상세 조회
+    // 게시글 상세 조회
     public ArticleDetailResponseDTO getArticleDetail(Long articleId, UserDetails userDetails) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
@@ -120,6 +120,7 @@ public class ArticleService {
                 .date(formattedDate)
                 .content(article.getContent())
                 .likeCnt(article.getLikeCnt())
+                .cmtCnt(article.getCmtCnt())
                 .images(imageUrls)
                 .category(article.getCategory())
                 .myArticle(myArticle)

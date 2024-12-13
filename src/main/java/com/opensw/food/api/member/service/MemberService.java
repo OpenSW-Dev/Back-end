@@ -1,11 +1,14 @@
 package com.opensw.food.api.member.service;
 
 
+import com.opensw.food.api.article.repository.ArticleRepository;
+import com.opensw.food.api.comment.repository.CommentRepository;
 import com.opensw.food.api.member.dto.FollowedUserDTO;
 import com.opensw.food.api.member.dto.LoginRequestDto;
 import com.opensw.food.api.member.dto.SignupRequestDto;
 import com.opensw.food.api.member.entity.Follow;
 import com.opensw.food.api.member.entity.Member;
+import com.opensw.food.api.member.entity.Role;
 import com.opensw.food.api.member.jwt.JwtProvider;
 import com.opensw.food.api.member.repository.FollowRepository;
 import com.opensw.food.api.member.repository.MemberRepository;
@@ -31,17 +34,19 @@ public class MemberService {
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
     private final FollowRepository followRepository;
+    private final CommentRepository commentRepository;
+    private final ArticleRepository articleRepository;
 
-    public Member signupMember(SignupRequestDto requestDto) {
+    public void signupMember(SignupRequestDto requestDto) {
 
-        if (memberRepository.existsByNickname(requestDto.getNickname())) {
-            throw new IllegalArgumentException("Nickname is already in use");
-        }
+        Member member = Member.builder()
+                .email(requestDto.getEmail())
+                .password(passwordEncoder.encode(requestDto.getPassword()))
+                .nickname(requestDto.getNickname())
+                .role(Role.USER)
+                .build();
 
-        Member member = requestDto.toMember();
-        member.encodePassword(passwordEncoder);
-
-        return memberRepository.save(member);
+        memberRepository.save(member);
     }
 
     public String loginMember(LoginRequestDto requestDto) {
@@ -111,5 +116,16 @@ public class MemberService {
                         follow.getFollowing().getNickname()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteMember(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
+
+        commentRepository.deleteAllByMember(member);
+        articleRepository.deleteAllByMember(member);
+        followRepository.deleteByFollowerOrFollowing(member, member);
+        memberRepository.delete(member);
     }
 }

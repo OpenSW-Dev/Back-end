@@ -44,10 +44,6 @@ public class Member extends BaseTimeEntity {
     @OneToMany(mappedBy = "following", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Follow> followers;  // 나를 팔로우 하는 사람들
 
-    public void addUserAuthority() {
-        this.role = Role.USER;
-    }
-
     public void encodePassword(PasswordEncoder passwordEncoder) {
         this.password = passwordEncoder.encode(password);
     }

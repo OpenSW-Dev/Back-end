@@ -47,6 +47,7 @@ public enum ErrorStatus {
      */
     FAIL_UPLOAD_PROFILE_IMAGE(HttpStatus.INTERNAL_SERVER_ERROR, "프로필 사진이 변경되지 않았습니다."),
 
+
     ;
 
     private final HttpStatus httpStatus;

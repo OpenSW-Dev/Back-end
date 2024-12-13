@@ -1,9 +1,6 @@
 package com.opensw.food.api.member.controller;
 
-import com.opensw.food.api.member.dto.FollowRequestDTO;
-import com.opensw.food.api.member.dto.FollowedUserDTO;
-import com.opensw.food.api.member.dto.LoginRequestDto;
-import com.opensw.food.api.member.dto.SignupRequestDto;
+import com.opensw.food.api.member.dto.*;
 import com.opensw.food.api.member.entity.Member;
 import com.opensw.food.api.member.service.MemberService;
 import com.opensw.food.common.response.ApiResponse;
@@ -32,9 +29,9 @@ public class MemberController {
             description = "사용자의 정보를 등록합니다."
     )
     @PostMapping("/auth/signup")
-    public ResponseEntity<ApiResponse<Member>> signup(@Validated @RequestBody SignupRequestDto signupRequestDto) {
-        Member newMember = memberService.signupMember(signupRequestDto);
-        return ApiResponse.success(SuccessStatus.SEND_SIGNUP_SUCCESS, newMember);
+    public ResponseEntity<ApiResponse<Void>> signup(@Validated @RequestBody SignupRequestDto signupRequestDto) {
+        memberService.signupMember(signupRequestDto);
+        return ApiResponse.success_only(SuccessStatus.SEND_SIGNUP_SUCCESS);
     }
 
     @Operation(
@@ -47,16 +44,15 @@ public class MemberController {
         return ApiResponse.success(SuccessStatus.SEND_LOGIN_SUCCESS, token);
     }
 
-    @GetMapping("/members/{email}")
-    public ResponseEntity<ApiResponse<Long>> getMemberByEmail(@PathVariable String email) {
-        Long memberId = memberService.getUserIdByEmail(email);
-        return ApiResponse.success(SuccessStatus.GET_MEMBER_SUCCESS, memberId);
-    }
-
+    @Operation(
+            summary = "사용자 정보 조회 API",
+            description = "사용자 정보를 조회합니다."
+    )
     @GetMapping("/members/me")
-    public ResponseEntity<ApiResponse<Member>> getCurrentMember() {
-        Member currentMember = memberService.getCurrentMember();
-        return ApiResponse.success(SuccessStatus.GET_CURRENT_MEMBER_SUCCESS, currentMember);
+    public ResponseEntity<ApiResponse<UserInfoResponseDTO>> getCurrentMember(@AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
+        UserInfoResponseDTO userInfo = memberService.getCurrentMember(userId);
+        return ApiResponse.success(SuccessStatus.GET_CURRENT_MEMBER_SUCCESS, userInfo);
     }
 
     @Operation(summary = "사용자 팔로우, 언팔로우 API", description = "특정 사용자를 팔로우하거나, 이미 팔로우한 경우 해지합니다.")
@@ -82,5 +78,17 @@ public class MemberController {
         Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
         List<FollowedUserDTO> followedUsers = memberService.getFollowedUsers(userId);
         return ApiResponse.success(SuccessStatus.GET_FOLLOWED_USERS_SUCCESS, followedUsers);
+    }
+
+    @Operation(
+            summary = "회원 탈퇴 API",
+            description = "현재 사용자를 회원 탈퇴합니다."
+    )
+    @PostMapping("/auth/withdraw")
+    public ResponseEntity<ApiResponse<Void>> withdrawMember(Member member) {
+        Long memberId = memberService.getUserIdByEmail(member.getEmail());
+        memberService.deleteMember(memberId);
+
+        return ApiResponse.success_only(SuccessStatus.MEMBER_WITHDRAW_SUCCESS);
     }
 }

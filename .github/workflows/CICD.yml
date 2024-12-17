@@ -20,7 +20,13 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 2. application-aws.yml 파일 생성
+    # 2. application.yml 파일 생성
+    - name: Create application.yml
+      run: |
+        mkdir -p src/main/resources
+        echo "${{ secrets.APPLICATION_YML }}" > src/main/resources/application.yml
+
+    # 2-1. application-aws.yml 파일 생성
     - name: Create application-aws.yml
       run: |
         mkdir -p src/main/resources

@@ -179,7 +179,7 @@ public class ArticleService {
                 )).collect(Collectors.toList());
     }
 
-    // 게시글 삭제 (댓글 먼저 삭제 후 게시글 삭제)
+    // 게시글 삭제
     public void deleteArticle(Long articleId, Long userId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
@@ -188,7 +188,7 @@ public class ArticleService {
             throw new NotFoundException(ErrorStatus.ARTICLE_WRITER_NOT_SAME_USER_EXCEPTION.getMessage());
         }
 
-        // 게시글과 연관된 댓글 삭제
+        // 게시글에 연관된 댓글 삭제
         List<Comment> comments = commentRepository.findByArticle(article);
         commentRepository.deleteAll(comments);
 
@@ -207,6 +207,10 @@ public class ArticleService {
             throw new BadRequestException(ErrorStatus.ARTICLE_WRITER_NOT_SAME_USER_EXCEPTION.getMessage());
         }
 
+        // 기존 이미지 목록 복사
+        List<ArticleImage> oldImages = new ArrayList<>(article.getImages());
+
+        // 업데이트된 게시글 객체 생성 (일단 기존 이미지 그대로)
         Article updatedArticle = Article.builder()
                 .id(article.getId())
                 .member(article.getMember())
@@ -215,37 +219,63 @@ public class ArticleService {
                 .category(articleRequest.getCategory())
                 .likeCnt(article.getLikeCnt())
                 .cmtCnt(article.getCmtCnt())
-                .images(new ArrayList<>(article.getImages()))
+                .images(new ArrayList<>(oldImages))
                 .build();
 
-        // Base64 이미지 처리
-        List<String> base64ImageUrls = processBase64Images(articleRequest.getContent(), String.valueOf(userId));
-        updatedArticle.addImages(base64ImageUrls);
+        // 1. Base64 인라인 이미지 처리
+        List<String> newBase64ImageUrls = processBase64Images(articleRequest.getContent(), String.valueOf(userId));
+        updatedArticle.addImages(newBase64ImageUrls);
 
-        // 삭제할 이미지 처리
+        // 2. deleteImageUrls에 해당하는 이미지 제거
         if (deleteImageUrls != null && !deleteImageUrls.isEmpty()) {
-            List<ArticleImage> imagesToRemove = article.getImages().stream()
+            List<ArticleImage> imagesToRemove = updatedArticle.getImages().stream()
                     .filter(image -> deleteImageUrls.contains(image.getImageUrl()))
                     .collect(Collectors.toList());
 
-            for (ArticleImage image : imagesToRemove) {
-                // S3에서 이미지 삭제
-                s3Service.deleteFile(image.getImageUrl());
-                updatedArticle.getImages().remove(image);
+            for (ArticleImage img : imagesToRemove) {
+                s3Service.deleteFile(img.getImageUrl());
+                updatedArticle.getImages().remove(img);
             }
         }
 
-        // 새로운 이미지 업로드 및 추가
+        // 3. 새로운 Multipart 이미지 업로드
+        List<String> newUploadedImageUrls = new ArrayList<>();
         if (newImages != null && !newImages.isEmpty()) {
-            List<String> imageUrls = s3Service.uploadArticleImages(String.valueOf(userId), newImages);
-            for (String url : imageUrls) {
-                ArticleImage image = ArticleImage.builder()
+            newUploadedImageUrls = s3Service.uploadArticleImages(String.valueOf(userId), newImages);
+            for (String url : newUploadedImageUrls) {
+                ArticleImage newImg = ArticleImage.builder()
                         .imageUrl(url)
                         .article(updatedArticle)
                         .build();
-                updatedArticle.getImages().add(image);
+                updatedArticle.getImages().add(newImg);
             }
         }
+
+        // 4. 기존 이미지 중 이번 요청에 포함되지 않은 이미지 제거
+        // 최종 남아야 할 이미지 = newBase64ImageUrls + newUploadedImageUrls 중 deleteImageUrls에 없는 것들
+        Set<String> finalImageSet = new HashSet<>();
+        finalImageSet.addAll(newBase64ImageUrls);
+        finalImageSet.addAll(newUploadedImageUrls);
+        if (deleteImageUrls != null) {
+            // 이미 삭제한 이미지들은 finalImageSet에 들어있어도 제거 대상
+            finalImageSet.removeAll(deleteImageUrls);
+        }
+
+        // updatedArticle.getImages()를 순회하며 finalImageSet에 없는 이미지 제거
+        List<ArticleImage> finalImages = new ArrayList<>();
+        for (ArticleImage img : updatedArticle.getImages()) {
+            if (finalImageSet.contains(img.getImageUrl())) {
+                finalImages.add(img);
+            } else {
+                // finalImageSet에 없다면 제거
+                s3Service.deleteFile(img.getImageUrl());
+            }
+        }
+
+        // 정리된 이미지 리스트로 세팅
+        updatedArticle = updatedArticle.toBuilder()
+                .images(finalImages)
+                .build();
 
         articleRepository.save(updatedArticle);
     }
@@ -311,5 +341,4 @@ public class ArticleService {
                 })
                 .collect(Collectors.toList());
     }
-
 }

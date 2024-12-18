@@ -11,7 +11,7 @@ import com.opensw.food.api.article.repository.ArticleLikeRepository;
 import com.opensw.food.api.article.repository.ArticleRepository;
 import com.opensw.food.api.aws.s3.S3Service;
 import com.opensw.food.api.comment.entity.Comment;
-import com.opensw.food.api.comment.repository.CommentRepository; // 댓글 리포지토리 주입
+import com.opensw.food.api.comment.repository.CommentRepository;
 import com.opensw.food.api.member.entity.Follow;
 import com.opensw.food.api.member.entity.Member;
 import com.opensw.food.api.member.repository.MemberRepository;
@@ -179,7 +179,7 @@ public class ArticleService {
                 )).collect(Collectors.toList());
     }
 
-    // 게시글 삭제
+    // 게시글 삭제 (댓글 먼저 삭제 후 게시글 삭제)
     public void deleteArticle(Long articleId, Long userId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
@@ -217,6 +217,10 @@ public class ArticleService {
                 .cmtCnt(article.getCmtCnt())
                 .images(new ArrayList<>(article.getImages()))
                 .build();
+
+        // Base64 이미지 처리
+        List<String> base64ImageUrls = processBase64Images(articleRequest.getContent(), String.valueOf(userId));
+        updatedArticle.addImages(base64ImageUrls);
 
         // 삭제할 이미지 처리
         if (deleteImageUrls != null && !deleteImageUrls.isEmpty()) {
@@ -286,23 +290,23 @@ public class ArticleService {
         }
 
         List<Article> articles = articleRepository.findAll().stream()
-                .filter(article -> followingIds.contains(article.getMember().getMemberId()))
+                .filter(a -> followingIds.contains(a.getMember().getMemberId()))
                 .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt()))
                 .toList();
 
         return articles.stream()
-                .map(article -> {
-                    String firstImageUrl = article.getImages().isEmpty()
+                .map(a -> {
+                    String firstImageUrl = a.getImages().isEmpty()
                             ? null
-                            : article.getImages().get(0).getImageUrl();
+                            : a.getImages().get(0).getImageUrl();
 
                     return new ArticleTotalListResponseDTO(
-                            article.getId(),
-                            article.getTitle(),
-                            article.getCategory(),
+                            a.getId(),
+                            a.getTitle(),
+                            a.getCategory(),
                             firstImageUrl,
-                            article.getMember().getMemberId(),
-                            article.getMember().getNickname()
+                            a.getMember().getMemberId(),
+                            a.getMember().getNickname()
                     );
                 })
                 .collect(Collectors.toList());

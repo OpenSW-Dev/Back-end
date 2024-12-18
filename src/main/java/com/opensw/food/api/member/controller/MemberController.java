@@ -55,7 +55,10 @@ public class MemberController {
         return ApiResponse.success(SuccessStatus.GET_CURRENT_MEMBER_SUCCESS, userInfo);
     }
 
-    @Operation(summary = "사용자 팔로우, 언팔로우 API", description = "특정 사용자를 팔로우하거나, 이미 팔로우한 경우 해지합니다.")
+    @Operation(
+            summary = "사용자 팔로우, 언팔로우 API",
+            description = "특정 사용자를 팔로우하거나, 이미 팔로우한 경우 해지합니다."
+    )
     @PostMapping("/follow")
     public ResponseEntity<ApiResponse<Void>> followMember(@AuthenticationPrincipal UserDetails userDetails,
                                                           @RequestBody FollowRequestDTO followRequestDTO) {
@@ -84,7 +87,7 @@ public class MemberController {
             summary = "회원 탈퇴 API",
             description = "현재 사용자를 회원 탈퇴합니다."
     )
-    @PostMapping("/auth/withdraw")
+    @DeleteMapping("/auth/withdraw")
     public ResponseEntity<ApiResponse<Void>> withdrawMember(Member member) {
         Long memberId = memberService.getUserIdByEmail(member.getEmail());
         memberService.withDrawMember(memberId);

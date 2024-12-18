@@ -30,6 +30,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 @Service
 @RequiredArgsConstructor
 public class ArticleService {
@@ -40,24 +44,29 @@ public class ArticleService {
     private final S3Service s3Service;
     private final MemberService memberService;
 
+    private static final String BASE64_IMAGE_REGEX = "data:image/(png|jpeg|jpg|webp|bmp);base64,([A-Za-z0-9+/=]+)";
+
     // 게시글 생성
     public void createArticle(Long userId, ArticleCreateRequestDTO articleRequest, List<MultipartFile> images) throws IOException {
 
-        // 해당 유저를 찾을 수 없을 경우 예외처리
+        // 유저 검증
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
 
+        // Base64 이미지 처리 및 본문 업데이트
+        String updatedContent = processBase64Images(articleRequest.getContent(), String.valueOf(userId));
+
+        // 게시글 생성
         Article article = Article.builder()
                 .member(member)
                 .title(articleRequest.getTitle())
-                .content(articleRequest.getContent())
+                .content(updatedContent) // 업데이트된 본문 저장
                 .category(articleRequest.getCategory())
                 .likeCnt(0)
                 .build();
 
         // 이미지 처리
         if (images != null && !images.isEmpty()) {
-
             List<String> imageUrls = s3Service.uploadArticleImages(String.valueOf(userId), images);
             article.addImages(imageUrls);
         }
@@ -65,33 +74,37 @@ public class ArticleService {
         articleRepository.save(article);
     }
 
-    // 전체 게시글 조회
-    public List<ArticleTotalListResponseDTO> getTotalArticle() {
-        List<Article> articles = articleRepository.findAll();
+    private String processBase64Images(String content, String userId) throws IOException {
+        if (content == null || content.isEmpty()) {
+            return content;
+        }
 
-        List<Article> sortedArticles = articles.stream()
-                .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt()))
-                .toList();
+        Pattern pattern = Pattern.compile(BASE64_IMAGE_REGEX);
+        Matcher matcher = pattern.matcher(content);
 
-        return sortedArticles.stream()
-                .map(article -> {
-                    // 이미지 리스트 중 첫 번째 이미지를 추출
-                    String firstImageUrl = article.getImages().isEmpty()
-                            ? null
-                            : article.getImages().get(0).getImageUrl();
+        StringBuilder updatedContent = new StringBuilder();
+        int lastEnd = 0;
 
-                    return new ArticleTotalListResponseDTO(
-                            article.getId(),
-                            article.getTitle(),
-                            article.getCategory(),
-                            firstImageUrl,
-                            article.getMember().getMemberId(),
-                            article.getMember().getNickname()
-                    );
-                })
-                .collect(Collectors.toList());
+        while (matcher.find()) {
+            String mimeType = matcher.group(1);
+            String base64Image = matcher.group(2);
+
+            // 이미지 디코딩 및 S3 업로드
+            byte[] decodedBytes = Base64.getDecoder().decode(base64Image);
+            String fileName = "inline-image-" + System.currentTimeMillis() + "." + mimeType;
+            String s3Url = s3Service.uploadInlineImage(userId, fileName, decodedBytes);
+
+            // 기존 Base64 이미지 태그를 S3 URL로 대체
+            updatedContent.append(content, lastEnd, matcher.start());
+            updatedContent.append("<img src=\"").append(s3Url).append("\" />");
+            lastEnd = matcher.end();
+        }
+
+        // 남은 텍스트 추가
+        updatedContent.append(content, lastEnd, content.length());
+
+        return updatedContent.toString();
     }
-
 
     // 게시글 상세 조회
     public ArticleDetailResponseDTO getArticleDetail(Long articleId, UserDetails userDetails) {

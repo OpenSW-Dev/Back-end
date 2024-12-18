@@ -73,6 +73,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/public/**").permitAll()  // 공개 API 엔드포인트
                         .requestMatchers("/h2-console/**").permitAll()  // H2 콘솔 접근 허용
                         .requestMatchers("/api/v1/article/detail", "/api/v1/article/total").permitAll() // 게시글 전체, 상세 조회 접근 허용
+                        .requestMatchers("/api/v1/comment").permitAll() // 댓글 조회 접근 허용
                         .requestMatchers( "/api-doc","/v3/api-docs/**", "/swagger-resources/**","/swagger-ui/**").permitAll() // 스웨거 접근 허용
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtFilter(jwtProvider), UsernamePasswordAuthenticationFilter.class);

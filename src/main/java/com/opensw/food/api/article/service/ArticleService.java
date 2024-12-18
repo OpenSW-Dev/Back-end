@@ -10,6 +10,8 @@ import com.opensw.food.api.article.entity.ArticleLike;
 import com.opensw.food.api.article.repository.ArticleLikeRepository;
 import com.opensw.food.api.article.repository.ArticleRepository;
 import com.opensw.food.api.aws.s3.S3Service;
+import com.opensw.food.api.comment.entity.Comment;
+import com.opensw.food.api.comment.repository.CommentRepository; // 댓글 리포지토리 주입
 import com.opensw.food.api.member.entity.Follow;
 import com.opensw.food.api.member.entity.Member;
 import com.opensw.food.api.member.repository.MemberRepository;
@@ -24,10 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import java.util.Base64;
@@ -43,6 +42,7 @@ public class ArticleService {
     private final ArticleLikeRepository articleLikeRepository;
     private final S3Service s3Service;
     private final MemberService memberService;
+    private final CommentRepository commentRepository;
 
     private static final String BASE64_IMAGE_REGEX = "data:image/(png|jpeg|jpg|webp|bmp);base64,([A-Za-z0-9+/=]+)";
 
@@ -57,7 +57,7 @@ public class ArticleService {
         Article article = Article.builder()
                 .member(member)
                 .title(articleRequest.getTitle())
-                .content(articleRequest.getContent()) // 본문 내용 그대로 사용
+                .content(articleRequest.getContent())
                 .category(articleRequest.getCategory())
                 .likeCnt(0)
                 .cmtCnt(0)
@@ -110,7 +110,6 @@ public class ArticleService {
 
         return sortedArticles.stream()
                 .map(article -> {
-                    // 이미지 리스트 중 첫 번째 이미지를 추출
                     String firstImageUrl = article.getImages().isEmpty()
                             ? null
                             : article.getImages().get(0).getImageUrl();
@@ -144,7 +143,6 @@ public class ArticleService {
         List<String> imageUrls = article.getImages().isEmpty() ? null :
                 article.getImages().stream().map(ArticleImage::getImageUrl).collect(Collectors.toList());
 
-        // 날짜 포맷팅
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd:HH:mm:ss");
         String formattedDate = article.getUpdatedAt().format(formatter);
 
@@ -166,14 +164,10 @@ public class ArticleService {
 
     // 내가 작성한 게시글 조회
     public List<MyArticleListResponseDTO> getMyArticleList(UserDetails userDetails){
-
-        // 현재 사용자 조회
         Long userId = memberService.getUserIdByEmail(userDetails.getUsername());
 
-        // 사용자 작성 게시글 조회
         List<Article> myMemos = articleRepository.findArticlesByMemberMemberId(userId);
 
-        // DTO 변환 및 반환
         return myMemos.stream()
                 .map(memo -> new MyArticleListResponseDTO(
                         memo.getId(),
@@ -190,27 +184,29 @@ public class ArticleService {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
 
-        // 게시글 작성자와 삭제 요청자가 다를 경우 예외 처리
         if (!article.getMember().getMemberId().equals(userId)) {
             throw new NotFoundException(ErrorStatus.ARTICLE_WRITER_NOT_SAME_USER_EXCEPTION.getMessage());
         }
 
+        // 게시글과 연관된 댓글 삭제
+        List<Comment> comments = commentRepository.findByArticle(article);
+        commentRepository.deleteAll(comments);
+
+        // 이미지, 좋아요는 CascadeType.ALL로 Article 삭제 시 자동 제거
         articleRepository.delete(article);
     }
 
     // 게시글 수정
     public void updateArticle(Long memoId, Long userId, ArticleCreateRequestDTO articleRequest,
-                           List<MultipartFile> newImages, List<String> deleteImageUrls) throws IOException {
+                              List<MultipartFile> newImages, List<String> deleteImageUrls) throws IOException {
 
         Article article = articleRepository.findById(memoId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.RESOURCE_NOT_FOUND.getMessage()));
 
-        // 메모 작성자 확인
         if (!article.getMember().getMemberId().equals(userId)) {
             throw new BadRequestException(ErrorStatus.ARTICLE_WRITER_NOT_SAME_USER_EXCEPTION.getMessage());
         }
 
-        // 메모 정보 업데이트 (Builder 패턴 사용)
         Article updatedArticle = Article.builder()
                 .id(article.getId())
                 .member(article.getMember())
@@ -218,6 +214,7 @@ public class ArticleService {
                 .content(articleRequest.getContent())
                 .category(articleRequest.getCategory())
                 .likeCnt(article.getLikeCnt())
+                .cmtCnt(article.getCmtCnt())
                 .images(new ArrayList<>(article.getImages()))
                 .build();
 
@@ -230,7 +227,6 @@ public class ArticleService {
             for (ArticleImage image : imagesToRemove) {
                 // S3에서 이미지 삭제
                 s3Service.deleteFile(image.getImageUrl());
-                // 메모에서 이미지 제거
                 updatedArticle.getImages().remove(image);
             }
         }
@@ -258,15 +254,12 @@ public class ArticleService {
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
 
-        // 좋아요 상태 확인
         Optional<ArticleLike> existingLike = articleLikeRepository.findByArticleIdAndMemberMemberId(articleId, userId);
 
         if (existingLike.isPresent()) {
-            // 좋아요 취소
             articleLikeRepository.delete(existingLike.get());
             article = article.decreaseLikeCnt();
         } else {
-            // 좋아요 추가
             ArticleLike articleLike = ArticleLike.builder()
                     .article(article)
                     .member(member)
@@ -283,29 +276,22 @@ public class ArticleService {
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
 
-        // 내가 팔로우하고 있는 사람들 가져오기
-        // follower = 나, following = 내가 팔로우하는 사용자
         List<Follow> followingList = member.getFollowing();
-
-        // 팔로우하고 있는 사용자들의 memberId 리스트 추출
         List<Long> followingIds = followingList.stream()
                 .map(follow -> follow.getFollowing().getMemberId())
                 .toList();
 
-        // 팔로우 대상자들이 작성한 게시글 조회
-        // followingIds가 비어있을 수 있으므로 체크
         if (followingIds.isEmpty()) {
             return Collections.emptyList();
         }
 
         List<Article> articles = articleRepository.findAll().stream()
                 .filter(article -> followingIds.contains(article.getMember().getMemberId()))
-                .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt())) // 최신순 정렬(필요 시)
+                .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt()))
                 .toList();
 
         return articles.stream()
                 .map(article -> {
-                    // 이미지 리스트 중 첫 번째 이미지를 추출
                     String firstImageUrl = article.getImages().isEmpty()
                             ? null
                             : article.getImages().get(0).getImageUrl();

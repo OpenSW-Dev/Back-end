@@ -52,6 +52,7 @@ public class SecurityConfig {
                         CorsConfiguration config = new CorsConfiguration();
                         config.setAllowedOrigins(Arrays.asList(
                                 "https://food-social.kro.kr",
+                                "https://www.food-social.kro.kr",
                                 "http://localhost:8080",
                                 "http://127.0.0.1:5500"
                         ));

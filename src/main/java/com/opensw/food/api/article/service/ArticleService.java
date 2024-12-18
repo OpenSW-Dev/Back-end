@@ -65,18 +65,6 @@ public class ArticleService {
                 .likeCnt(0)
                 .build();
 
-        // 재료 처리
-        if (articleRequest.getIngredients() != null && !articleRequest.getIngredients().isEmpty()) {
-            List<Ingredient> ingredients = articleRequest.getIngredients().stream()
-                    .map(dto -> Ingredient.builder()
-                            .name(dto.getName())
-                            .amount(dto.getAmount())
-                            .article(article)
-                            .build())
-                    .collect(Collectors.toList());
-            article.addIngredients(ingredients);
-        }
-
         // 이미지 처리
         if (images != null && !images.isEmpty()) {
             List<String> imageUrls = s3Service.uploadArticleImages(String.valueOf(userId), images);

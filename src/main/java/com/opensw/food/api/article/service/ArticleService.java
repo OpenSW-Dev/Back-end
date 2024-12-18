@@ -106,6 +106,33 @@ public class ArticleService {
         return updatedContent.toString();
     }
 
+    // 전체 게시글 조회
+    public List<ArticleTotalListResponseDTO> getTotalArticle() {
+        List<Article> articles = articleRepository.findAll();
+
+        List<Article> sortedArticles = articles.stream()
+                .sorted((a1, a2) -> a2.getCreatedAt().compareTo(a1.getCreatedAt()))
+                .toList();
+
+        return sortedArticles.stream()
+                .map(article -> {
+                    // 이미지 리스트 중 첫 번째 이미지를 추출
+                    String firstImageUrl = article.getImages().isEmpty()
+                            ? null
+                            : article.getImages().get(0).getImageUrl();
+
+                    return new ArticleTotalListResponseDTO(
+                            article.getId(),
+                            article.getTitle(),
+                            article.getCategory(),
+                            firstImageUrl,
+                            article.getMember().getMemberId(),
+                            article.getMember().getNickname()
+                    );
+                })
+                .collect(Collectors.toList());
+    }
+
     // 게시글 상세 조회
     public ArticleDetailResponseDTO getArticleDetail(Long articleId, UserDetails userDetails) {
         Article article = articleRepository.findById(articleId)

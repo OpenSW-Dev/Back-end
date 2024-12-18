@@ -53,19 +53,21 @@ public class ArticleService {
         Member member = memberRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(ErrorStatus.USER_NOTFOUND_EXCEPTION.getMessage()));
 
-        // Base64 이미지 처리 및 본문 업데이트
-        String updatedContent = processBase64Images(articleRequest.getContent(), String.valueOf(userId));
-
         // 게시글 생성
         Article article = Article.builder()
                 .member(member)
                 .title(articleRequest.getTitle())
-                .content(updatedContent) // 업데이트된 본문 저장
+                .content(articleRequest.getContent()) // 본문 내용 그대로 사용
                 .category(articleRequest.getCategory())
                 .likeCnt(0)
+                .cmtCnt(0)
                 .build();
 
-        // 이미지 처리
+        // Base64 이미지 처리 및 추가
+        List<String> base64ImageUrls = processBase64Images(articleRequest.getContent(), String.valueOf(userId));
+        article.addImages(base64ImageUrls);
+
+        // 추가 이미지 처리
         if (images != null && !images.isEmpty()) {
             List<String> imageUrls = s3Service.uploadArticleImages(String.valueOf(userId), images);
             article.addImages(imageUrls);
@@ -74,16 +76,14 @@ public class ArticleService {
         articleRepository.save(article);
     }
 
-    private String processBase64Images(String content, String userId) throws IOException {
+    private List<String> processBase64Images(String content, String userId) throws IOException {
+        List<String> imageUrls = new ArrayList<>();
         if (content == null || content.isEmpty()) {
-            return content;
+            return imageUrls;
         }
 
         Pattern pattern = Pattern.compile(BASE64_IMAGE_REGEX);
         Matcher matcher = pattern.matcher(content);
-
-        StringBuilder updatedContent = new StringBuilder();
-        int lastEnd = 0;
 
         while (matcher.find()) {
             String mimeType = matcher.group(1);
@@ -94,16 +94,10 @@ public class ArticleService {
             String fileName = "inline-image-" + System.currentTimeMillis() + "." + mimeType;
             String s3Url = s3Service.uploadInlineImage(userId, fileName, decodedBytes);
 
-            // 기존 Base64 이미지 태그를 S3 URL로 대체
-            updatedContent.append(content, lastEnd, matcher.start());
-            updatedContent.append("<img src=\"").append(s3Url).append("\" />");
-            lastEnd = matcher.end();
+            imageUrls.add(s3Url);
         }
 
-        // 남은 텍스트 추가
-        updatedContent.append(content, lastEnd, content.length());
-
-        return updatedContent.toString();
+        return imageUrls;
     }
 
     // 전체 게시글 조회

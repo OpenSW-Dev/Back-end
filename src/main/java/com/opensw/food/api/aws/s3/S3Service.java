@@ -64,6 +64,20 @@ public class S3Service {
         return imageUrls;
     }
 
+    public String uploadInlineImage(String userIdentifier, String fileName, byte[] fileData) {
+        String dir = "inline-images";
+        String fileKey = dir + "/" + userIdentifier + "/" + fileName;
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileKey)
+                .acl("public-read")
+                .build();
+
+        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileData));
+        return domain + "/" + fileKey;
+    }
+
     public String uploadProfileImage(String email, MultipartFile file) throws IOException {
         String dir = "profile-images";
         // 현재 날짜와 시간 가져오기
